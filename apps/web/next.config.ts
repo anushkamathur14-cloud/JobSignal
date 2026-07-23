@@ -3,9 +3,14 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@libsql/client", "pdf-parse"],
-  outputFileTracingRoot: path.join(__dirname, "../../"),
+  // Only set tracing root for local monorepo; on Vercel the app root is apps/web
+  ...(process.env.VERCEL
+    ? {}
+    : {
+        outputFileTracingRoot: path.join(__dirname, "../../"),
+      }),
   outputFileTracingIncludes: {
-    "/api/**/*": ["./data/vercel-seed.json", "../../data/vercel-seed.json"],
+    "/api/**/*": ["./data/vercel-seed.json"],
   },
 };
 
