@@ -14,7 +14,14 @@ type Company = {
 };
 
 const ATS = ["greenhouse", "lever", "ashby", "workday", "other"];
-const STAGES = ["all", "enterprise", "growth", "startup"] as const;
+const STAGES = [
+  "all",
+  "fortune500",
+  "enterprise",
+  "growth",
+  "startup",
+  "seattle_startup",
+] as const;
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -49,11 +56,17 @@ export default function CompaniesPage() {
   }, [companies, stageFilter]);
 
   const counts = useMemo(() => {
-    const c = { all: companies.length, enterprise: 0, growth: 0, startup: 0 };
+    const c: Record<(typeof STAGES)[number], number> = {
+      all: companies.length,
+      fortune500: 0,
+      enterprise: 0,
+      growth: 0,
+      startup: 0,
+      seattle_startup: 0,
+    };
     for (const row of companies) {
-      if (row.stage === "enterprise") c.enterprise++;
-      else if (row.stage === "growth") c.growth++;
-      else if (row.stage === "startup") c.startup++;
+      const s = row.stage as (typeof STAGES)[number] | null;
+      if (s && s !== "all" && s in c) c[s]++;
     }
     return c;
   }, [companies]);
@@ -139,10 +152,11 @@ export default function CompaniesPage() {
             Company watchlist
           </h1>
           <p className="mt-1 max-w-2xl text-[var(--muted)]">
-            Job Signal only scrapes boards you list here — not the whole market. The
-            curated pack mixes enterprise (Netflix, Salesforce, NVIDIA…), growth
-            (Stripe, OpenAI, Anthropic…), and startups (Cursor, Linear, Perplexity…).
-            Add any public Greenhouse / Lever / Ashby / Workday board yourself.
+            Job Signal only scrapes boards you list here. Filter by Fortune 500,
+            enterprise, growth, startup, or Seattle. Use{" "}
+            <strong className="font-medium text-[var(--text)]">Load curated pack</strong>{" "}
+            after deploy. True top-100 lists need a public ATS URL per company —
+            add missing boards below or send career links.
           </p>
         </div>
         <button
@@ -215,9 +229,11 @@ export default function CompaniesPage() {
             value={form.stage}
             onChange={(e) => setForm({ ...form, stage: e.target.value })}
           >
+            <option value="fortune500">fortune500</option>
             <option value="enterprise">enterprise</option>
             <option value="growth">growth</option>
             <option value="startup">startup</option>
+            <option value="seattle_startup">seattle_startup</option>
           </select>
         </label>
         <label className="block text-sm sm:col-span-2">

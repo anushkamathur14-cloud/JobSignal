@@ -4,7 +4,9 @@ export const ROLE_FAMILIES = [
   "data_science",
   "machine_learning",
   "product_management",
+  "product_marketing",
   "program_management",
+  "business_strategy",
   "design",
   "devops_sre",
   "security",
@@ -46,6 +48,20 @@ export const DOMAINS = [
 
 export type Domain = (typeof DOMAINS)[number];
 
+/** Default “My interests” preset for Trends filters */
+export const MY_INTEREST_ROLES: RoleFamily[] = [
+  "business_strategy",
+  "sales",
+  "customer_success",
+  "product_management",
+  "product_marketing",
+  "marketing",
+  "machine_learning",
+];
+
+/** Domains left empty — interests are role-based (ML family covers AI titles). */
+export const MY_INTEREST_DOMAINS: Domain[] = [];
+
 /** Human-readable note for the unclassified bucket */
 export const OTHER_ROLE_NOTE =
   "Other = job titles that didn’t match a known role family (e.g. niche specialist titles, facilities, admin). Filter it out or pick specific roles below.";
@@ -54,7 +70,7 @@ const ROLE_RULES: { family: RoleFamily; patterns: RegExp[] }[] = [
   {
     family: "machine_learning",
     patterns: [
-      /\b(machine learning|ml engineer|mlops|llm|genai|generative ai|deep learning|ai engineer|ai researcher|applied scientist)\b/i,
+      /\b(machine learning|ml engineer|mlops|llm|genai|generative ai|deep learning|ai engineer|ai researcher|applied scientist|ai product|ai\/ml|ml\/ai)\b/i,
     ],
   },
   {
@@ -80,8 +96,20 @@ const ROLE_RULES: { family: RoleFamily; patterns: RegExp[] }[] = [
     patterns: [/\b(qa engineer|quality assurance|test engineer|sdet|automation engineer|quality engineer)\b/i],
   },
   {
+    family: "product_marketing",
+    patterns: [
+      /\b(product marketing|product marketer|\bpmm\b|go[\s-]?to[\s-]?market|gtm manager|competitive intelligence)\b/i,
+    ],
+  },
+  {
     family: "product_management",
     patterns: [/\b(product manager|product owner|group product|principal product|\bpm\b|product lead)\b/i],
+  },
+  {
+    family: "business_strategy",
+    patterns: [
+      /\b(business strategy|corporate strategy|strategy manager|strategic planning|management consultant|strategy\s*&\s*ops|strategy\s*&\s*operations|strategy and ops|strategy and operations|bizops|business operations|chief of staff|corp strategy)\b/i,
+    ],
   },
   {
     family: "program_management",
@@ -108,12 +136,12 @@ const ROLE_RULES: { family: RoleFamily; patterns: RegExp[] }[] = [
   {
     family: "marketing",
     patterns: [
-      /\b(marketing|growth|demand gen|content marketing|brand manager|product marketing|pmm\b|seo|lifecycle marketing)\b/i,
+      /\b(marketing|growth|demand gen|content marketing|brand manager|seo|lifecycle marketing|demand generation)\b/i,
     ],
   },
   {
     family: "customer_success",
-    patterns: [/\b(customer success|solutions engineer|technical account|implementation|customer engineer)\b/i],
+    patterns: [/\b(customer success|solutions engineer|technical account|implementation|customer engineer|csm\b)\b/i],
   },
   {
     family: "support",
@@ -129,7 +157,7 @@ const ROLE_RULES: { family: RoleFamily; patterns: RegExp[] }[] = [
   },
   {
     family: "operations",
-    patterns: [/\b(operations|bizops|business operations|chief of staff|strategy & operations|revops)\b/i],
+    patterns: [/\b(operations|revops|revenue operations|ops manager)\b/i],
   },
   {
     family: "legal",

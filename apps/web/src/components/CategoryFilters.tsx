@@ -1,6 +1,9 @@
 "use client";
 
-import { formatLabel } from "@/lib/classify";
+import {
+  formatLabel,
+  MY_INTEREST_ROLES,
+} from "@/lib/classify";
 
 export function ChipFilter({
   label,
@@ -51,6 +54,12 @@ export function ChipFilter({
   );
 }
 
+function sameSet(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  const s = new Set(a);
+  return b.every((x) => s.has(x));
+}
+
 export function CategoryFilters({
   roles,
   domains,
@@ -62,20 +71,35 @@ export function CategoryFilters({
   onRolesChange: (next: string[]) => void;
   onDomainsChange: (next: string[]) => void;
 }) {
+  const interestActive =
+    sameSet(roles, [...MY_INTEREST_ROLES]) && domains.length === 0;
+
+  const applyInterests = () => {
+    onRolesChange([...MY_INTEREST_ROLES]);
+    onDomainsChange([]);
+  };
+
+  const clearInterests = () => {
+    onRolesChange([]);
+    onDomainsChange([]);
+  };
+
   const roleOptions = [
-    "software_engineering",
+    "business_strategy",
+    "sales",
+    "customer_success",
+    "product_management",
+    "product_marketing",
+    "marketing",
     "machine_learning",
+    "software_engineering",
     "data_science",
     "data_engineering",
-    "product_management",
     "program_management",
     "design",
     "devops_sre",
     "security",
     "qa_test",
-    "sales",
-    "marketing",
-    "customer_success",
     "support",
     "finance",
     "people_hr",
@@ -108,6 +132,25 @@ export function CategoryFilters({
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs uppercase tracking-wider text-[var(--muted)]">
+          Interests
+        </span>
+        <button
+          type="button"
+          onClick={() => (interestActive ? clearInterests() : applyInterests())}
+          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+            interestActive
+              ? "border-[var(--accent)] bg-[var(--accent)]/25 text-[var(--text)]"
+              : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
+          }`}
+        >
+          My interests
+        </button>
+        <span className="text-xs text-[var(--muted)]">
+          Strategy · Sales · CS · PM · PMM · Marketing · ML/AI
+        </span>
+      </div>
       <ChipFilter label="Roles" options={roleOptions} selected={roles} onChange={onRolesChange} />
       <ChipFilter
         label="Domains"

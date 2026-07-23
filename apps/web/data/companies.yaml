@@ -1,12 +1,15 @@
 # Curated watchlist — public ATS boards only (slug/URL must resolve).
-# stage: enterprise | growth | startup
+# stage: enterprise | growth | startup | fortune500 | seattle_startup
+# Note: Exact “top 100 F500 / top 100 Seattle” needs a public ATS per company;
+# we only include boards we’ve verified. Add more via Companies → Load curated pack
+# or paste career-board URLs.
 companies:
-  # —— Enterprise / large public ——
+  # —— Fortune 500–scale ——
   - name: Netflix
     ats_type: lever
     board_slug: netflix
     domain_hint: media
-    stage: enterprise
+    stage: fortune500
   - name: Spotify
     ats_type: lever
     board_slug: spotify
@@ -37,30 +40,30 @@ companies:
     board_slug: salesforce
     board_url: https://salesforce.wd12.myworkdayjobs.com/wday/cxs/salesforce/External_Career_Site/jobs
     domain_hint: enterprise
-    stage: enterprise
+    stage: fortune500
   - name: Adobe
     ats_type: workday
     board_slug: adobe
     board_url: https://adobe.wd5.myworkdayjobs.com/wday/cxs/adobe/external_experienced/jobs
     domain_hint: creative_tools
-    stage: enterprise
+    stage: fortune500
   - name: NVIDIA
     ats_type: workday
     board_slug: nvidia
     board_url: https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs
     domain_hint: ai_ml
-    stage: enterprise
+    stage: fortune500
   - name: ServiceNow
     ats_type: workday
     board_slug: servicenow
     board_url: https://servicenow.wd1.myworkdayjobs.com/wday/cxs/servicenow/ServiceNow/jobs
     domain_hint: enterprise
-    stage: enterprise
+    stage: fortune500
   - name: Block
     ats_type: greenhouse
     board_slug: block
     domain_hint: fintech
-    stage: enterprise
+    stage: fortune500
   - name: Dropbox
     ats_type: greenhouse
     board_slug: dropbox
@@ -132,6 +135,42 @@ companies:
     board_url: https://jobs.ashbyhq.com/snowflake
     domain_hint: data
     stage: enterprise
+  - name: Intel
+    ats_type: workday
+    board_slug: intel
+    board_url: https://intel.wd1.myworkdayjobs.com/wday/cxs/intel/External/jobs
+    domain_hint: infrastructure
+    stage: fortune500
+  - name: Cisco
+    ats_type: workday
+    board_slug: cisco
+    board_url: https://cisco.wd5.myworkdayjobs.com/wday/cxs/cisco/Cisco_Careers/jobs
+    domain_hint: infrastructure
+    stage: fortune500
+  - name: Disney
+    ats_type: workday
+    board_slug: disney
+    board_url: https://disney.wd5.myworkdayjobs.com/wday/cxs/disney/disneycareer/jobs
+    domain_hint: media
+    stage: fortune500
+  - name: Comcast
+    ats_type: workday
+    board_slug: comcast
+    board_url: https://comcast.wd5.myworkdayjobs.com/wday/cxs/comcast/Comcast_Careers/jobs
+    domain_hint: media
+    stage: fortune500
+  - name: Broadcom
+    ats_type: workday
+    board_slug: broadcom
+    board_url: https://broadcom.wd1.myworkdayjobs.com/wday/cxs/broadcom/External_Career/jobs
+    domain_hint: infrastructure
+    stage: fortune500
+  - name: Micron
+    ats_type: workday
+    board_slug: micron
+    board_url: https://micron.wd1.myworkdayjobs.com/wday/cxs/micron/External/jobs
+    domain_hint: infrastructure
+    stage: fortune500
 
   # —— Growth / late-stage ——
   - name: Stripe
@@ -254,7 +293,7 @@ companies:
     domain_hint: fintech
     stage: growth
 
-  # —— Startups / early–mid ——
+  # —— Startups ——
   - name: Linear
     ats_type: ashby
     board_slug: linear
@@ -322,9 +361,69 @@ companies:
     domain_hint: analytics
     stage: startup
 
+  # —— Seattle / PNW (verified boards) ——
+  - name: Outreach
+    ats_type: lever
+    board_slug: outreach
+    domain_hint: enterprise
+    stage: seattle_startup
+  - name: Highspot
+    ats_type: lever
+    board_slug: highspot
+    domain_hint: enterprise
+    stage: seattle_startup
+  - name: Smartsheet
+    ats_type: greenhouse
+    board_slug: smartsheet
+    domain_hint: productivity
+    stage: seattle_startup
+  - name: SeekOut
+    ats_type: greenhouse
+    board_slug: seekout
+    domain_hint: enterprise
+    stage: seattle_startup
+  - name: OfferUp
+    ats_type: greenhouse
+    board_slug: offerup
+    domain_hint: marketplace
+    stage: seattle_startup
+  - name: Temporal
+    ats_type: ashby
+    board_slug: temporal
+    board_url: https://jobs.ashbyhq.com/temporal
+    domain_hint: infrastructure
+    stage: seattle_startup
+  - name: Tecton
+    ats_type: lever
+    board_slug: tecton
+    domain_hint: ai_ml
+    stage: seattle_startup
+  - name: Latch
+    ats_type: ashby
+    board_slug: latch
+    board_url: https://jobs.ashbyhq.com/latch
+    domain_hint: biotech
+    stage: seattle_startup
+  - name: Okta
+    ats_type: greenhouse
+    board_slug: okta
+    domain_hint: infrastructure
+    stage: seattle_startup
+  - name: Gusto
+    ats_type: greenhouse
+    board_slug: gusto
+    domain_hint: fintech
+    stage: seattle_startup
+
 jsearch_queries:
   - software engineer remote
-  - machine learning engineer
-  - product manager
+  - machine learning engineer Seattle
+  - AI engineer Seattle
+  - product manager Seattle
+  - product marketing manager
+  - customer success manager
+  - business strategy manager
+  - sales account executive
+  - marketing manager Seattle
   - data scientist
   - devops engineer
