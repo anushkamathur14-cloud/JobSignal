@@ -34,6 +34,166 @@ type Rec = {
   }[];
 };
 
+function RecCard({
+  rec,
+  rank,
+  expanded,
+  onToggle,
+}: {
+  rec: Rec;
+  rank: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <article
+      className={`flex flex-col rounded-xl border bg-[var(--bg-elevated)]/80 transition ${
+        expanded
+          ? "border-[var(--accent-dim)] sm:col-span-2 lg:col-span-3"
+          : "border-[var(--border)] hover:border-[var(--accent-dim)]/60"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full flex-col items-start gap-3 p-4 text-left"
+      >
+        <div className="flex w-full items-start justify-between gap-2">
+          <span className="text-xs text-[var(--muted)]">#{rank}</span>
+          <span className="text-xs text-[var(--muted)]">{expanded ? "Collapse" : "Expand"}</span>
+        </div>
+        <h3
+          className="text-lg leading-snug"
+          style={{ fontFamily: "var(--font-display-loaded), var(--font-display)" }}
+        >
+          {rec.label}
+        </h3>
+        {rec.domain && (
+          <p className="text-xs text-[var(--muted)]">{rec.domain.replace(/_/g, " ")}</p>
+        )}
+        <div className="mt-auto grid w-full grid-cols-3 gap-2 text-center text-xs">
+          <div className="rounded-md bg-[var(--bg-soft)] px-2 py-2">
+            <div className="text-[var(--muted)]">Fit</div>
+            <div className="text-base tabular-nums text-[var(--chart-2)]">
+              {(rec.fitScore * 100).toFixed(0)}
+            </div>
+          </div>
+          <div className="rounded-md bg-[var(--bg-soft)] px-2 py-2">
+            <div className="text-[var(--muted)]">Trend</div>
+            <div className="text-base tabular-nums text-[var(--chart-1)]">
+              {(rec.trendScore * 100).toFixed(0)}
+            </div>
+          </div>
+          <div className="rounded-md bg-[var(--bg-soft)] px-2 py-2">
+            <div className="text-[var(--muted)]">Score</div>
+            <div className="text-base font-semibold tabular-nums">
+              {(rec.combinedScore * 100).toFixed(0)}
+            </div>
+          </div>
+        </div>
+        {!expanded && (
+          <p className="text-xs text-[var(--muted)]">
+            {rec.examples.length
+              ? `${rec.examples.length} open role${rec.examples.length === 1 ? "" : "s"}`
+              : "No linked openings"}{" "}
+            · click for details
+          </p>
+        )}
+      </button>
+
+      {expanded && (
+        <div className="space-y-4 border-t border-[var(--border)] px-4 pb-4 pt-3">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <h4 className="text-xs uppercase tracking-wider text-[var(--muted)]">Why you fit</h4>
+              <ul className="mt-2 space-y-1 text-sm">
+                {rec.whyFit.map((w) => (
+                  <li key={w} className="text-[var(--text)]">
+                    · {w}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-xs uppercase tracking-wider text-[var(--muted)]">Why it’s hot</h4>
+              <ul className="mt-2 space-y-1 text-sm">
+                {rec.whyHot.map((w) => (
+                  <li key={w} className="text-[var(--text)]">
+                    · {w}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {rec.examples.length > 0 && (
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h4 className="text-xs uppercase tracking-wider text-[var(--muted)]">Open roles</h4>
+                <button
+                  type="button"
+                  className="text-xs text-[var(--chart-2)] underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const links = rec.examples
+                      .filter((ex) => ex.url)
+                      .map((ex) => `${ex.title} @ ${ex.company}\n${ex.url}`)
+                      .join("\n\n");
+                    void navigator.clipboard.writeText(links);
+                  }}
+                >
+                  Copy links
+                </button>
+              </div>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {rec.examples.map((ex) => (
+                  <li
+                    key={`${ex.company}-${ex.title}-${ex.url}`}
+                    className="rounded-lg border border-[var(--border)]/70 bg-[var(--bg)]/50 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        {ex.url ? (
+                          <a
+                            href={ex.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-medium text-[var(--chart-2)] hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {ex.title}
+                          </a>
+                        ) : (
+                          <span className="text-sm font-medium">{ex.title}</span>
+                        )}
+                        <div className="mt-0.5 text-xs text-[var(--muted)]">
+                          {ex.company}
+                          {ex.location ? ` · ${ex.location}` : ""}
+                        </div>
+                      </div>
+                      {ex.url && (
+                        <a
+                          href={ex.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="shrink-0 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Open ↗
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
 export default function AimPage() {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [text, setText] = useState("");
@@ -44,6 +204,7 @@ export default function AimPage() {
   const [meta, setMeta] = useState<{ periodType?: string; interimNote?: string | null }>({});
   const [error, setError] = useState<string | null>(null);
   const [loadingRecs, setLoadingRecs] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const loadResumes = async () => {
     const res = await fetch("/api/resume");
@@ -63,6 +224,7 @@ export default function AimPage() {
       if (!res.ok) throw new Error(json.error || "Failed");
       setRecs(json.recommendations);
       setMeta({ periodType: json.periodType, interimNote: json.interimNote });
+      setExpandedId(null);
     } catch (e) {
       setError((e as Error).message);
       setRecs([]);
@@ -128,7 +290,7 @@ export default function AimPage() {
   const latest = resumes[0];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="space-y-8">
       <div>
         <h1
           className="text-3xl tracking-tight"
@@ -137,12 +299,12 @@ export default function AimPage() {
           Aim
         </h1>
         <p className="mt-1 text-[var(--muted)]">
-          Drop your resume → get roles that fit you and are hiring, with real job links.
+          Drop your resume → pick a target card to expand fit reasons and live job links.
         </p>
       </div>
 
       {!latest ? (
-        <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/80 p-5">
+        <div className="mx-auto max-w-xl space-y-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/80 p-5">
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border)] px-4 py-8 text-center hover:border-[var(--accent-dim)]">
             <span className="text-sm text-[var(--muted)]">Upload PDF or .txt</span>
             <input
@@ -217,93 +379,17 @@ export default function AimPage() {
             </div>
           )}
 
-          <div className="space-y-3">
-            {recs.slice(0, 5).map((r, i) => (
-              <article
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {recs.map((r, i) => (
+              <RecCard
                 key={r.roleFamily}
-                className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/80 p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs text-[var(--muted)]">#{i + 1}</div>
-                    <h3
-                      className="text-lg"
-                      style={{ fontFamily: "var(--font-display-loaded), var(--font-display)" }}
-                    >
-                      {r.label}
-                    </h3>
-                    <p className="text-sm text-[var(--muted)]">
-                      Fit {(r.fitScore * 100).toFixed(0)} · Trend {(r.trendScore * 100).toFixed(0)} ·
-                      Score {(r.combinedScore * 100).toFixed(0)}
-                    </p>
-                  </div>
-                </div>
-                <ul className="mt-3 space-y-1 text-sm text-[var(--muted)]">
-                  {r.whyFit.slice(0, 2).map((w) => (
-                    <li key={w}>· {w}</li>
-                  ))}
-                  {r.whyHot.slice(0, 1).map((w) => (
-                    <li key={w}>· {w}</li>
-                  ))}
-                </ul>
-                {r.examples.length > 0 && (
-                  <div className="mt-3 space-y-2 border-t border-[var(--border)]/60 pt-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-wider text-[var(--muted)]">
-                        Open roles
-                      </span>
-                      <button
-                        type="button"
-                        className="text-xs text-[var(--chart-2)] underline"
-                        onClick={() => {
-                          const links = r.examples
-                            .filter((ex) => ex.url)
-                            .map((ex) => `${ex.title} @ ${ex.company}\n${ex.url}`)
-                            .join("\n\n");
-                          void navigator.clipboard.writeText(links);
-                        }}
-                      >
-                        Copy links
-                      </button>
-                    </div>
-                    {r.examples.slice(0, 5).map((ex) => (
-                      <div
-                        key={`${ex.company}-${ex.title}-${ex.url}`}
-                        className="flex items-start justify-between gap-2 text-sm"
-                      >
-                        <div>
-                          {ex.url ? (
-                            <a
-                              href={ex.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[var(--chart-2)] hover:underline"
-                            >
-                              {ex.title}
-                            </a>
-                          ) : (
-                            ex.title
-                          )}
-                          <div className="text-xs text-[var(--muted)]">
-                            {ex.company}
-                            {ex.location ? ` · ${ex.location}` : ""}
-                          </div>
-                        </div>
-                        {ex.url && (
-                          <a
-                            href={ex.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="shrink-0 text-xs text-[var(--muted)] hover:text-[var(--text)]"
-                          >
-                            Open ↗
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </article>
+                rec={r}
+                rank={i + 1}
+                expanded={expandedId === r.roleFamily}
+                onToggle={() =>
+                  setExpandedId((cur) => (cur === r.roleFamily ? null : r.roleFamily))
+                }
+              />
             ))}
           </div>
         </section>
