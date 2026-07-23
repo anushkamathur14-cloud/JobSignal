@@ -10,7 +10,6 @@ import {
   type SeriesPoint,
   type TrendRow,
 } from "@/components/TrendViews";
-import { OTHER_ROLE_NOTE } from "@/lib/classify";
 
 type DimBlock = {
   periodKey: string;
@@ -31,12 +30,19 @@ type TrendsResponse = {
   totals: { activeJobs: number; companies: number; sources: string[] };
 };
 
+const PERIODS = [
+  { id: "week" as const, label: "Week", hint: "vs last week" },
+  { id: "month" as const, label: "Month", hint: "vs last month" },
+  { id: "quarter" as const, label: "Quarter", hint: "vs last quarter" },
+];
+
 export default function TrendsPage() {
-  const [period, setPeriod] = useState<"week" | "month" | "quarter">("week");
+  const [period, setPeriod] = useState<"week" | "month" | "quarter">("month");
   const [sources, setSources] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [domains, setDomains] = useState<string[]>([]);
-  const [hideOther, setHideOther] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [data, setData] = useState<TrendsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [ingestState, setIngestState] = useState<string | null>(null);
@@ -65,7 +71,7 @@ export default function TrendsPage() {
   }, [load]);
 
   const runIngest = async () => {
-    setIngestState("Polling ATS boards…");
+    setIngestState("Refreshing live boards…");
     try {
       const res = await fetch("/api/ingest", {
         method: "POST",
@@ -77,52 +83,45 @@ export default function TrendsPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setIngestState(json.error || "Ingest failed");
+        setIngestState(json.error || "Refresh failed");
         return;
       }
       setIngestState(
-        `Upserted ${json.upserted} jobs` +
-          (json.errors?.length ? ` · ${json.errors.length} source error(s)` : "")
+        `Updated ${json.upserted} openings` +
+          (json.errors?.length ? ` · ${json.errors.length} board(s) skipped` : "")
       );
       await load();
     } catch (e) {
-      setIngestState(`Ingest failed: ${(e as Error).message}`);
+      setIngestState(`Refresh failed: ${(e as Error).message}`);
     }
   };
 
-  const filterRows = (rows: TrendRow[]) =>
-    hideOther && !roles.includes("other") ? rows.filter((r) => r.key !== "other") : rows;
-
-  const periodShort =
-    data?.effectivePeriodType === "week"
-      ? "WoW"
-      : data?.effectivePeriodType === "quarter"
-        ? "QoQ"
-        : "MoM";
+  const filterRows = (rows: TrendRow[]) => rows.filter((r) => r.key !== "other");
 
   const periodLabel = data
-    ? `${periodShort} ${data.roles.periodKey}` +
+    ? `${data.roles.periodKey}` +
       (data.roles.previousKey ? ` vs ${data.roles.previousKey}` : "")
     : "";
 
   const roleRows = data ? filterRows(data.roles.rows) : [];
   const domainRows = data ? filterRows(data.domains.rows) : [];
-  const companyRows = data?.companies.rows ?? [];
-  const otherCount = data?.roles.rows.find((r) => r.key === "other")?.current ?? 0;
+  const companyRows = data?.companies.rows.filter((r) => r.key !== "other") ?? [];
   const series = data?.roles.series ?? [];
+  const activeFilters = sources.length + roles.length + domains.length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1
             className="text-3xl tracking-tight"
             style={{ fontFamily: "var(--font-display-loaded), var(--font-display)" }}
           >
-            Hiring trends
+            Trends
           </h1>
-          <p className="mt-1 max-w-xl text-[var(--muted)]">
-            Live ATS openings — switch WoW / MoM / QoQ, filter by board, role, and domain.
+          <p className="mt-1 max-w-lg text-[var(--muted)]">
+            What’s open right now on company career boards — and how that shifted vs the prior
+            period.
           </p>
         </div>
         <button
@@ -130,72 +129,57 @@ export default function TrendsPage() {
           onClick={runIngest}
           className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#04140f] transition hover:brightness-110"
         >
-          Run ingest now
+          Refresh jobs
         </button>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 p-4">
-        <SourceFilter selected={sources} onChange={setSources} />
-        <CategoryFilters
-          roles={roles}
-          domains={domains}
-          onRolesChange={setRoles}
-          onDomainsChange={setDomains}
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs uppercase tracking-wider text-[var(--muted)]">Period</span>
-          {(["week", "month", "quarter"] as const).map((p) => (
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/70 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-xs uppercase tracking-wider text-[var(--muted)]">Compare</span>
+          {PERIODS.map((p) => (
             <button
-              key={p}
+              key={p.id}
               type="button"
-              onClick={() => setPeriod(p)}
-              className={`rounded-md border px-2.5 py-1 text-sm capitalize ${
-                period === p
-                  ? "border-[var(--accent-dim)] bg-[var(--accent-dim)]/30"
-                  : "border-[var(--border)] text-[var(--muted)]"
+              onClick={() => setPeriod(p.id)}
+              className={`rounded-md border px-3 py-1.5 text-sm ${
+                period === p.id
+                  ? "border-[var(--accent-dim)] bg-[var(--accent-dim)]/35 text-[var(--text)]"
+                  : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
               }`}
+              title={p.hint}
             >
-              {p === "week" ? "WoW" : p === "month" ? "MoM" : "QoQ"}
+              {p.label}
             </button>
           ))}
-          <label className="ml-auto flex items-center gap-2 text-sm text-[var(--muted)]">
-            <input
-              type="checkbox"
-              checked={hideOther}
-              onChange={(e) => setHideOther(e.target.checked)}
-              className="accent-[var(--accent)]"
-            />
-            Hide “Other” bucket
-          </label>
+          <button
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            className="ml-auto rounded-md border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] hover:text-[var(--text)]"
+          >
+            Filters{activeFilters ? ` · ${activeFilters}` : ""}
+          </button>
         </div>
-        {hideOther && otherCount > 0 && (
-          <p className="text-xs text-[var(--muted)]">
-            {OTHER_ROLE_NOTE} Currently {otherCount} openings sit in Other (hidden from charts).
+
+        {showFilters && (
+          <div className="mt-4 space-y-3 border-t border-[var(--border)] pt-4">
+            <SourceFilter selected={sources} onChange={setSources} />
+            <CategoryFilters
+              roles={roles}
+              domains={domains}
+              onRolesChange={setRoles}
+              onDomainsChange={setDomains}
+            />
+          </div>
+        )}
+
+        {data && (
+          <p className="mt-3 text-xs text-[var(--muted)]">
+            {data.totals.activeJobs.toLocaleString()} live openings · comparing {periodLabel}
+            {data.interimNote ? ` · ${data.interimNote}` : ""}
           </p>
         )}
-        {ingestState && <p className="text-sm text-[var(--muted)]">{ingestState}</p>}
-        {data?.interimNote && (
-          <p className="text-sm text-[var(--warn)]">{data.interimNote}</p>
-        )}
+        {ingestState && <p className="mt-2 text-sm text-[var(--muted)]">{ingestState}</p>}
       </div>
-
-      {data && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
-            { label: "Active jobs", value: data.totals.activeJobs },
-            { label: "Watchlist cos.", value: data.totals.companies },
-            { label: "Live sources", value: data.totals.sources.join(", ") || "—" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/80 px-4 py-3"
-            >
-              <div className="text-xs uppercase tracking-wider text-[var(--muted)]">{s.label}</div>
-              <div className="mt-1 text-xl tabular-nums">{s.value}</div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {error && <p className="text-[var(--down)]">{error}</p>}
       {loading && !data && <p className="text-[var(--muted)]">Loading…</p>}
@@ -204,11 +188,24 @@ export default function TrendsPage() {
         <div className="space-y-6">
           <TrendLineChart series={series} rows={roleRows} periodLabel={periodLabel} />
           <RoleBarChart rows={roleRows} />
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TrendTable title="Role families" rows={roleRows} periodLabel={periodLabel} />
-            <TrendTable title="Domains" rows={domainRows} periodLabel={periodLabel} />
-          </div>
-          <TrendTable title="Companies hiring" rows={companyRows} periodLabel={periodLabel} />
+
+          <button
+            type="button"
+            onClick={() => setShowDetails((v) => !v)}
+            className="text-sm text-[var(--muted)] underline hover:text-[var(--text)]"
+          >
+            {showDetails ? "Hide tables" : "Show role / domain / company tables"}
+          </button>
+
+          {showDetails && (
+            <div className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <TrendTable title="Roles" rows={roleRows} periodLabel={periodLabel} />
+                <TrendTable title="Domains" rows={domainRows} periodLabel={periodLabel} />
+              </div>
+              <TrendTable title="Companies" rows={companyRows} periodLabel={periodLabel} />
+            </div>
+          )}
         </div>
       )}
     </div>

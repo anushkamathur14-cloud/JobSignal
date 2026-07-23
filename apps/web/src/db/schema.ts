@@ -30,6 +30,7 @@ export const jobPostings = sqliteTable(
     location: text("location"),
     remote: integer("remote", { mode: "boolean" }).default(false),
     url: text("url"),
+    postedAt: text("posted_at"), // ATS publish/create date when available
     firstSeen: text("first_seen").notNull(),
     lastSeen: text("last_seen").notNull(),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
@@ -39,6 +40,7 @@ export const jobPostings = sqliteTable(
     index("jobs_role_family").on(t.roleFamily),
     index("jobs_domain").on(t.domain),
     index("jobs_active").on(t.isActive),
+    index("jobs_posted_at").on(t.postedAt),
   ]
 );
 

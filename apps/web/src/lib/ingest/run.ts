@@ -15,7 +15,20 @@ export type NormalizedJob = {
   remote?: boolean;
   url?: string | null;
   domainHint?: string | null;
+  /** When the employer published the role (ISO), if the ATS exposes it */
+  postedAt?: string | null;
 };
+
+function toIsoDate(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") {
+    const ms = value < 1e12 ? value * 1000 : value;
+    const d = new Date(ms);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 async function fetchJson(url: string, init?: RequestInit) {
   const res = await fetch(url, {
@@ -35,16 +48,26 @@ export async function fetchGreenhouse(slug: string): Promise<NormalizedJob[]> {
     `https://boards-api.greenhouse.io/v1/boards/${slug}/jobs?content=true`
   );
   const jobs = data.jobs ?? [];
-  return jobs.map((j: { id: number; title: string; absolute_url?: string; location?: { name?: string } }) => ({
-    source: "greenhouse",
-    externalId: String(j.id),
-    companyId: null,
-    companyName: slug,
-    title: j.title,
-    location: j.location?.name ?? null,
-    remote: /remote/i.test(j.location?.name ?? "") || /remote/i.test(j.title),
-    url: j.absolute_url ?? null,
-  }));
+  return jobs.map(
+    (j: {
+      id: number;
+      title: string;
+      absolute_url?: string;
+      location?: { name?: string };
+      first_published?: string;
+      updated_at?: string;
+    }) => ({
+      source: "greenhouse",
+      externalId: String(j.id),
+      companyId: null,
+      companyName: slug,
+      title: j.title,
+      location: j.location?.name ?? null,
+      remote: /remote/i.test(j.location?.name ?? "") || /remote/i.test(j.title),
+      url: j.absolute_url ?? null,
+      postedAt: toIsoDate(j.first_published) ?? toIsoDate(j.updated_at),
+    })
+  );
 }
 
 export async function fetchLever(slug: string): Promise<NormalizedJob[]> {
@@ -57,6 +80,7 @@ export async function fetchLever(slug: string): Promise<NormalizedJob[]> {
       hostedUrl?: string;
       categories?: { location?: string };
       workplaceType?: string;
+      createdAt?: number;
     }) => ({
       source: "lever",
       externalId: j.id,
@@ -66,12 +90,12 @@ export async function fetchLever(slug: string): Promise<NormalizedJob[]> {
       location: j.categories?.location ?? null,
       remote: /remote/i.test(j.workplaceType ?? "") || /remote/i.test(j.categories?.location ?? ""),
       url: j.hostedUrl ?? null,
+      postedAt: toIsoDate(j.createdAt),
     })
   );
 }
 
 export async function fetchAshby(slug: string): Promise<NormalizedJob[]> {
-  // Ashby public job board API
   const data = await fetchJson(
     `https://api.ashbyhq.com/posting-api/job-board/${slug}?includeCompensation=true`
   );
@@ -83,6 +107,7 @@ export async function fetchAshby(slug: string): Promise<NormalizedJob[]> {
       jobUrl?: string;
       location?: string;
       isRemote?: boolean;
+      publishedAt?: string;
     }) => ({
       source: "ashby",
       externalId: j.id,
@@ -92,6 +117,7 @@ export async function fetchAshby(slug: string): Promise<NormalizedJob[]> {
       location: j.location ?? null,
       remote: Boolean(j.isRemote) || /remote/i.test(j.location ?? ""),
       url: j.jobUrl ?? `https://jobs.ashbyhq.com/${slug}/${j.id}`,
+      postedAt: toIsoDate(j.publishedAt),
     })
   );
 }
@@ -157,6 +183,8 @@ export async function fetchJSearch(query: string, apiKey: string): Promise<Norma
       job_country?: string;
       job_is_remote?: boolean;
       job_apply_link?: string;
+      job_posted_at?: string | number;
+      job_posted_at_datetime_utc?: string;
     }) => ({
       source: "jsearch",
       externalId: j.job_id,
@@ -166,6 +194,7 @@ export async function fetchJSearch(query: string, apiKey: string): Promise<Norma
       location: [j.job_city, j.job_country].filter(Boolean).join(", ") || null,
       remote: Boolean(j.job_is_remote),
       url: j.job_apply_link ?? null,
+      postedAt: toIsoDate(j.job_posted_at_datetime_utc) ?? toIsoDate(j.job_posted_at),
     })
   );
 }
@@ -174,6 +203,7 @@ async function upsertJob(job: NormalizedJob, domainHint?: string | null): Promis
   const now = isoNow();
   const roleFamily = classifyRoleFamily(job.title);
   const domain = classifyDomain(job.title, domainHint ?? job.domainHint);
+  const postedAt = job.postedAt ?? null;
 
   const existingRows = await db
     .select()
@@ -194,6 +224,7 @@ async function upsertJob(job: NormalizedJob, domainHint?: string | null): Promis
         location: job.location ?? null,
         remote: job.remote ?? false,
         url: job.url ?? null,
+        postedAt: postedAt ?? existing.postedAt,
         lastSeen: now,
         isActive: true,
       })
@@ -214,6 +245,7 @@ async function upsertJob(job: NormalizedJob, domainHint?: string | null): Promis
       location: job.location ?? null,
       remote: job.remote ?? false,
       url: job.url ?? null,
+      postedAt,
       firstSeen: now,
       lastSeen: now,
       isActive: true,

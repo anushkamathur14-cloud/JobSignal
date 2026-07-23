@@ -112,8 +112,15 @@ type JobRow = {
   roleFamily: string;
   domain: string;
   firstSeen: string;
+  postedAt: string | null;
   isActive: boolean;
 };
+
+function ageDate(job: JobRow): Date {
+  // Prefer employer publish date so QoQ/MoM aren't stuck at scrape-day baseline
+  const raw = job.postedAt || job.firstSeen;
+  return new Date(raw);
+}
 
 function dimValue(
   job: JobRow,
@@ -122,7 +129,7 @@ function dimValue(
   return (job[dimension] as string) || "unknown";
 }
 
-/** Compare current vs prior period using first_seen when snapshot history is thin */
+/** Compare current vs prior period using posted_at (fallback first_seen) */
 function compareFromJobs(
   jobs: JobRow[],
   periodType: "week" | "month" | "quarter",
@@ -139,13 +146,13 @@ function compareFromJobs(
   for (const job of jobs) {
     if (!job.isActive) continue;
     const k = dimValue(job, dimension);
-    const first = new Date(job.firstSeen).getTime();
+    const first = ageDate(job).getTime();
     const cur = currentMap.get(k) ?? { active: 0, neu: 0 };
     cur.active += 1;
     if (first >= start) cur.neu += 1;
     currentMap.set(k, cur);
 
-    // Still-open roles that existed before this period ≈ prior stock
+    // Still-open roles published before this period ≈ prior stock
     if (first < start) {
       const prev = previousMap.get(k) ?? { active: 0, neu: 0 };
       prev.active += 1;
@@ -182,20 +189,16 @@ function seriesFromJobs(
   const keys = recentPeriodKeys(periodType, periodType === "week" ? 8 : periodType === "month" ? 6 : 4);
   const series: SeriesPoint[] = [];
 
-  // Cumulative: openings first_seen on or before end of each period bucket
-  // Approximate period end as start of next period
   for (const pk of keys) {
     for (const key of topKeys) {
       let count = 0;
       for (const job of jobs) {
         if (!job.isActive) continue;
         if (dimValue(job, dimension) !== key) continue;
-        const jobPeriod = periodKeyFor(periodType, new Date(job.firstSeen));
-        // count jobs that had appeared by this period (first_seen period <= pk chronologically)
+        const jobPeriod = periodKeyFor(periodType, ageDate(job));
         if (keys.indexOf(jobPeriod) !== -1 && keys.indexOf(jobPeriod) <= keys.indexOf(pk)) {
           count += 1;
         } else if (keys.indexOf(jobPeriod) === -1) {
-          // older than window — include in all points
           count += 1;
         }
       }
@@ -222,6 +225,7 @@ async function loadFilteredJobs(opts: {
       roleFamily: jobPostings.roleFamily,
       domain: jobPostings.domain,
       firstSeen: jobPostings.firstSeen,
+      postedAt: jobPostings.postedAt,
       isActive: jobPostings.isActive,
     })
     .from(jobPostings)
@@ -395,7 +399,7 @@ export async function getTrends(opts: {
   const mode = roles.comparisonMode;
   const interimNote =
     mode === "first_seen"
-      ? `${periodType === "week" ? "WoW" : periodType === "month" ? "MoM" : "QoQ"} uses posting age (first seen) until a second ${periodType}ly snapshot exists from a later ingest.`
+      ? `${periodType === "week" ? "WoW" : periodType === "month" ? "MoM" : "QoQ"} compares live open roles using each posting’s publish date (not a full historical archive). Prior = still-open jobs posted before this ${periodType}.`
       : null;
 
   return {

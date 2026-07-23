@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
   location TEXT,
   remote INTEGER DEFAULT 0,
   url TEXT,
+  posted_at TEXT,
   first_seen TEXT NOT NULL,
   last_seen TEXT NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1
@@ -37,6 +38,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS jobs_source_external ON job_postings(source, e
 CREATE INDEX IF NOT EXISTS jobs_role_family ON job_postings(role_family);
 CREATE INDEX IF NOT EXISTS jobs_domain ON job_postings(domain);
 CREATE INDEX IF NOT EXISTS jobs_active ON job_postings(is_active);
+CREATE INDEX IF NOT EXISTS jobs_posted_at ON job_postings(posted_at);
 
 CREATE TABLE IF NOT EXISTS job_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -184,6 +186,19 @@ async function hydrateFromSeed(client: Client) {
 export async function migrate(client: Client = defaultClient) {
   if (migrated && !process.env.VERCEL) return;
   await client.executeMultiple(DDL);
+  // Additive migrations for existing DBs
+  try {
+    await client.execute("ALTER TABLE job_postings ADD COLUMN posted_at TEXT");
+  } catch {
+    // column already exists
+  }
+  try {
+    await client.execute(
+      "CREATE INDEX IF NOT EXISTS jobs_posted_at ON job_postings(posted_at)"
+    );
+  } catch {
+    // ignore
+  }
   if (process.env.VERCEL || process.env.HYDRATE_SEED === "1") {
     await hydrateFromSeed(client);
   }
