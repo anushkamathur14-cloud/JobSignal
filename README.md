@@ -58,16 +58,13 @@ DATABASE_URL=file:../../data/job-signal.db
 
 ## Deploy (Vercel)
 
-```bash
-npx vercel --prod
-```
+Connected to GitHub: push to `main` and Vercel auto-deploys.
 
-The app hydrates from `data/vercel-seed.json` on cold start (ephemeral `/tmp` SQLite on Vercel). For durable storage + live ingest on Vercel, create a free [Turso](https://turso.tech) database and set:
+Project settings:
+- **Root Directory**: `apps/web`
+- Optional durable DB: set `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` (otherwise the app hydrates from `data/vercel-seed.json` into ephemeral `/tmp` SQLite)
 
-- `TURSO_DATABASE_URL`
-- `TURSO_AUTH_TOKEN`
-
-Root directory for the Vercel project should be the repo root (monorepo build via workspaces).
+Production: https://job-signal-anushkamathur14-clouds-projects.vercel.app
 
 ## Layout
 
