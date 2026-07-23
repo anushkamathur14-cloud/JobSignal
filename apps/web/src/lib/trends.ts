@@ -84,6 +84,13 @@ function sourceClause(sources?: SourceFilter) {
   return inArray(jobSnapshots.source, sources);
 }
 
+function categoryClauses(opts?: { roles?: string[]; domains?: string[] }) {
+  const out = [];
+  if (opts?.roles?.length) out.push(inArray(jobSnapshots.roleFamily, opts.roles));
+  if (opts?.domains?.length) out.push(inArray(jobSnapshots.domain, opts.domains));
+  return out;
+}
+
 export type TrendRow = {
   key: string;
   label: string;
@@ -97,7 +104,8 @@ export type TrendRow = {
 async function aggregateDimension(
   periodType: "week" | "month" | "quarter",
   dimension: "roleFamily" | "domain" | "companyName",
-  sources?: SourceFilter
+  sources?: SourceFilter,
+  categories?: { roles?: string[]; domains?: string[] }
 ): Promise<{
   periodKey: string;
   previousKey: string | null;
@@ -111,6 +119,7 @@ async function aggregateDimension(
   const clauses = [eq(jobSnapshots.periodType, periodType), eq(jobSnapshots.periodKey, currentKey)];
   const src = sourceClause(sources);
   if (src) clauses.push(src);
+  clauses.push(...categoryClauses(categories));
 
   const currentRows = await db
     .select()
@@ -121,6 +130,7 @@ async function aggregateDimension(
   if (prevKey) {
     const pClauses = [eq(jobSnapshots.periodType, periodType), eq(jobSnapshots.periodKey, prevKey)];
     if (src) pClauses.push(src);
+    pClauses.push(...categoryClauses(categories));
     previousRows = await db
       .select()
       .from(jobSnapshots)
@@ -172,6 +182,7 @@ async function aggregateDimension(
   for (const pk of allPeriods) {
     const sClauses = [eq(jobSnapshots.periodType, periodType), eq(jobSnapshots.periodKey, pk)];
     if (src) sClauses.push(src);
+    sClauses.push(...categoryClauses(categories));
     const sRows = await db
       .select()
       .from(jobSnapshots)
@@ -188,9 +199,12 @@ async function aggregateDimension(
 export async function getTrends(opts: {
   periodType?: "week" | "month" | "quarter";
   sources?: SourceFilter;
+  roles?: string[];
+  domains?: string[];
 }) {
   const periodType = opts.periodType ?? "month";
   const sources = opts.sources;
+  const categories = { roles: opts.roles, domains: opts.domains };
 
   const monthCountRow = await db
     .select({ c: sql<number>`count(distinct ${jobSnapshots.periodKey})` })
@@ -209,6 +223,8 @@ export async function getTrends(opts: {
 
   const jobClauses = [eq(jobPostings.isActive, true)];
   if (sources?.length) jobClauses.push(inArray(jobPostings.source, sources));
+  if (opts.roles?.length) jobClauses.push(inArray(jobPostings.roleFamily, opts.roles));
+  if (opts.domains?.length) jobClauses.push(inArray(jobPostings.domain, opts.domains));
 
   const activeJobsRow = await db
     .select({ c: sql<number>`count(*)` })
@@ -233,9 +249,9 @@ export async function getTrends(opts: {
       periodType === "month" && effectiveType === "week"
         ? "Showing week-over-week until two months of snapshots exist."
         : null,
-    roles: await aggregateDimension(effectiveType, "roleFamily", sources),
-    domains: await aggregateDimension(effectiveType, "domain", sources),
-    companies: await aggregateDimension(effectiveType, "companyName", sources),
+    roles: await aggregateDimension(effectiveType, "roleFamily", sources, categories),
+    domains: await aggregateDimension(effectiveType, "domain", sources, categories),
+    companies: await aggregateDimension(effectiveType, "companyName", sources, categories),
     totals: {
       activeJobs: Number(activeJobsRow[0]?.c ?? 0),
       companies: Number(companiesRow[0]?.c ?? 0),

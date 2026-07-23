@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const periodType = (sp.get("period") as "week" | "month" | "quarter") || "month";
   const sources = sp.get("sources")?.split(",").filter(Boolean);
-  const data = await getTrends({ periodType, sources });
+  const roles = sp.get("roles")?.split(",").filter(Boolean);
+  const domains = sp.get("domains")?.split(",").filter(Boolean);
+  const data = await getTrends({ periodType, sources, roles, domains });
   return NextResponse.json(data);
 }

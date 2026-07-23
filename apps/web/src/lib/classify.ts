@@ -1,19 +1,25 @@
 export const ROLE_FAMILIES = [
   "software_engineering",
+  "data_engineering",
   "data_science",
   "machine_learning",
   "product_management",
+  "program_management",
   "design",
   "devops_sre",
   "security",
+  "qa_test",
   "sales",
   "marketing",
   "customer_success",
+  "support",
   "finance",
   "people_hr",
   "operations",
   "legal",
   "research",
+  "technical_writing",
+  "executive",
   "other",
 ] as const;
 
@@ -40,70 +46,106 @@ export const DOMAINS = [
 
 export type Domain = (typeof DOMAINS)[number];
 
+/** Human-readable note for the unclassified bucket */
+export const OTHER_ROLE_NOTE =
+  "Other = job titles that didn’t match a known role family (e.g. niche specialist titles, facilities, admin). Filter it out or pick specific roles below.";
+
 const ROLE_RULES: { family: RoleFamily; patterns: RegExp[] }[] = [
   {
     family: "machine_learning",
     patterns: [
-      /\b(machine learning|ml engineer|mlops|llm|genai|generative ai|deep learning|ai engineer|research scientist)\b/i,
+      /\b(machine learning|ml engineer|mlops|llm|genai|generative ai|deep learning|ai engineer|ai researcher|applied scientist)\b/i,
     ],
   },
   {
+    family: "data_engineering",
+    patterns: [/\b(data engineer|analytics engineer|etl|data platform|warehouse engineer)\b/i],
+  },
+  {
     family: "data_science",
-    patterns: [/\b(data scientist|data science|analytics engineer|data analyst|bi engineer)\b/i],
+    patterns: [/\b(data scientist|data science|data analyst|bi engineer|business intelligence|analytics)\b/i],
   },
   {
     family: "devops_sre",
-    patterns: [/\b(devops|sre|site reliability|platform engineer|infrastructure engineer|cloud engineer)\b/i],
+    patterns: [
+      /\b(devops|sre|site reliability|platform engineer|infrastructure engineer|cloud engineer|reliability engineer|systems engineer)\b/i,
+    ],
   },
   {
     family: "security",
-    patterns: [/\b(security engineer|appsec|infosec|cybersecurity|security analyst)\b/i],
+    patterns: [/\b(security engineer|appsec|infosec|cybersecurity|security analyst|security architect|red team|blue team)\b/i],
+  },
+  {
+    family: "qa_test",
+    patterns: [/\b(qa engineer|quality assurance|test engineer|sdet|automation engineer|quality engineer)\b/i],
   },
   {
     family: "product_management",
-    patterns: [/\b(product manager|product owner|pm\b|group product|principal product)\b/i],
+    patterns: [/\b(product manager|product owner|group product|principal product|\bpm\b|product lead)\b/i],
+  },
+  {
+    family: "program_management",
+    patterns: [/\b(program manager|technical program|tpm\b|project manager|scrum master)\b/i],
   },
   {
     family: "design",
-    patterns: [/\b(product designer|ux designer|ui designer|design systems|brand designer)\b/i],
+    patterns: [
+      /\b(product designer|ux designer|ui designer|design systems|brand designer|visual designer|graphic designer|ux researcher)\b/i,
+    ],
   },
   {
     family: "software_engineering",
     patterns: [
-      /\b(software engineer|backend|frontend|full[\s-]?stack|mobile engineer|ios|android|web engineer|engineering manager|staff engineer|principal engineer|swe)\b/i,
+      /\b(software engineer|software developer|backend|frontend|full[\s-]?stack|mobile engineer|ios|android|web engineer|engineering manager|staff engineer|principal engineer|swe|developer|engineer ii|engineer iii|member of technical)\b/i,
     ],
   },
   {
     family: "sales",
-    patterns: [/\b(account executive|sales|ae\b|sdr|bdr|revenue)\b/i],
+    patterns: [
+      /\b(account executive|sales|ae\b|sdr|bdr|revenue|account manager|sales manager|business development|enterprise sales)\b/i,
+    ],
   },
   {
     family: "marketing",
-    patterns: [/\b(marketing|growth|demand gen|content marketing|brand manager)\b/i],
+    patterns: [
+      /\b(marketing|growth|demand gen|content marketing|brand manager|product marketing|pmm\b|seo|lifecycle marketing)\b/i,
+    ],
   },
   {
     family: "customer_success",
-    patterns: [/\b(customer success|support engineer|solutions engineer|technical account)\b/i],
+    patterns: [/\b(customer success|solutions engineer|technical account|implementation|customer engineer)\b/i],
+  },
+  {
+    family: "support",
+    patterns: [/\b(support engineer|technical support|customer support|help desk|support specialist)\b/i],
   },
   {
     family: "finance",
-    patterns: [/\b(finance|accountant|controller|fp&a|treasury)\b/i],
+    patterns: [/\b(finance|accountant|controller|fp&a|treasury|financial analyst|auditor)\b/i],
   },
   {
     family: "people_hr",
-    patterns: [/\b(recruiter|people ops|human resources|hrbp|talent)\b/i],
+    patterns: [/\b(recruiter|people ops|human resources|hrbp|talent|people partner|sourcer)\b/i],
   },
   {
     family: "operations",
-    patterns: [/\b(operations|bizops|business operations|chief of staff)\b/i],
+    patterns: [/\b(operations|bizops|business operations|chief of staff|strategy & operations|revops)\b/i],
   },
   {
     family: "legal",
-    patterns: [/\b(counsel|attorney|legal|compliance)\b/i],
+    patterns: [/\b(counsel|attorney|legal|compliance|paralegal)\b/i],
   },
   {
     family: "research",
-    patterns: [/\b(research scientist|research engineer|phd)\b/i],
+    patterns: [/\b(research scientist|research engineer|research associate|\bphd\b)\b/i],
+  },
+  {
+    family: "technical_writing",
+    patterns: [/\b(technical writer|documentation|docs engineer|content designer)\b/i],
+  },
+  {
+    family: "executive",
+    patterns: [/\b(chief |vp |vice president|director of|head of|c-level|ceo|cto|cfo|coo|cmo)\b/i],
   },
 ];
 
@@ -153,6 +195,16 @@ export function formatLabel(key: string): string {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 }
+
+export const ROLE_FILTER_OPTIONS = ROLE_FAMILIES.map((id) => ({
+  id,
+  label: formatLabel(id),
+}));
+
+export const DOMAIN_FILTER_OPTIONS = DOMAINS.map((id) => ({
+  id,
+  label: formatLabel(id),
+}));
 
 export const SKILL_LEXICON = [
   "python",

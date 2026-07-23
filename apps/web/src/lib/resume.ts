@@ -59,12 +59,15 @@ export function parseResumeText(rawText: string): ParsedResume {
 
 const ROLE_SKILL_AFFINITY: Record<string, string[]> = {
   software_engineering: ["typescript", "javascript", "react", "node", "python", "java", "go", "system design", "sql"],
+  data_engineering: ["python", "sql", "spark", "aws", "kafka"],
   machine_learning: ["python", "pytorch", "tensorflow", "machine learning", "llm", "rag", "spark"],
   data_science: ["python", "sql", "spark", "data science", "machine learning"],
   product_management: ["product management", "sql", "figma"],
+  program_management: ["product management", "system design"],
   design: ["figma"],
   devops_sre: ["kubernetes", "docker", "terraform", "aws", "gcp", "ci/cd"],
-  security: ["aws", "python", "security"],
+  security: ["aws", "python"],
+  qa_test: ["typescript", "javascript", "python", "ci/cd"],
 };
 
 export function fitScoreForRole(

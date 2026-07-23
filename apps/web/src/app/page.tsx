@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { SourceFilter } from "@/components/SourceFilter";
+import { CategoryFilters } from "@/components/CategoryFilters";
 import { RisingChart, TrendTable, type TrendRow } from "@/components/TrendViews";
+import { OTHER_ROLE_NOTE } from "@/lib/classify";
 
 type TrendsResponse = {
   requestedPeriodType: string;
@@ -17,6 +19,9 @@ type TrendsResponse = {
 export default function TrendsPage() {
   const [period, setPeriod] = useState<"week" | "month" | "quarter">("month");
   const [sources, setSources] = useState<string[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [domains, setDomains] = useState<string[]>([]);
+  const [hideOther, setHideOther] = useState(true);
   const [data, setData] = useState<TrendsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [ingestState, setIngestState] = useState<string | null>(null);
@@ -28,6 +33,8 @@ export default function TrendsPage() {
     try {
       const qs = new URLSearchParams({ period });
       if (sources.length) qs.set("sources", sources.join(","));
+      if (roles.length) qs.set("roles", roles.join(","));
+      if (domains.length) qs.set("domains", domains.join(","));
       const res = await fetch(`/api/trends?${qs}`);
       if (!res.ok) throw new Error(await res.text());
       setData(await res.json());
@@ -36,7 +43,7 @@ export default function TrendsPage() {
     } finally {
       setLoading(false);
     }
-  }, [period, sources]);
+  }, [period, sources, roles, domains]);
 
   useEffect(() => {
     load();
@@ -54,6 +61,10 @@ export default function TrendsPage() {
         }),
       });
       const json = await res.json();
+      if (!res.ok) {
+        setIngestState(json.error || "Ingest failed");
+        return;
+      }
       setIngestState(
         `Upserted ${json.upserted} jobs` +
           (json.errors?.length ? ` · ${json.errors.length} source error(s)` : "")
@@ -64,10 +75,18 @@ export default function TrendsPage() {
     }
   };
 
+  const filterRows = (rows: TrendRow[]) =>
+    hideOther && !roles.includes("other") ? rows.filter((r) => r.key !== "other") : rows;
+
   const periodLabel = data
     ? `${data.effectivePeriodType} ${data.roles.periodKey}` +
       (data.roles.previousKey ? ` vs ${data.roles.previousKey}` : " (first snapshot)")
     : "";
+
+  const roleRows = data ? filterRows(data.roles.rows) : [];
+  const domainRows = data ? filterRows(data.domains.rows) : [];
+  const companyRows = data?.companies.rows ?? [];
+  const otherCount = data?.roles.rows.find((r) => r.key === "other")?.current ?? 0;
 
   return (
     <div className="space-y-8">
@@ -80,7 +99,7 @@ export default function TrendsPage() {
             Hiring trends
           </h1>
           <p className="mt-1 max-w-xl text-[var(--muted)]">
-            MoM / QoQ (or WoW until history builds) across your watchlist — filter by ATS board anytime.
+            MoM / QoQ across your watchlist — filter by ATS, role family, and domain.
           </p>
         </div>
         <button
@@ -94,7 +113,13 @@ export default function TrendsPage() {
 
       <div className="flex flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 p-4">
         <SourceFilter selected={sources} onChange={setSources} />
-        <div className="flex flex-wrap items-center gap-2">
+        <CategoryFilters
+          roles={roles}
+          domains={domains}
+          onRolesChange={setRoles}
+          onDomainsChange={setDomains}
+        />
+        <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs uppercase tracking-wider text-[var(--muted)]">Period</span>
           {(["week", "month", "quarter"] as const).map((p) => (
             <button
@@ -110,7 +135,21 @@ export default function TrendsPage() {
               {p === "week" ? "WoW" : p === "month" ? "MoM" : "QoQ"}
             </button>
           ))}
+          <label className="ml-auto flex items-center gap-2 text-sm text-[var(--muted)]">
+            <input
+              type="checkbox"
+              checked={hideOther}
+              onChange={(e) => setHideOther(e.target.checked)}
+              className="accent-[var(--accent)]"
+            />
+            Hide “Other” bucket
+          </label>
         </div>
+        {hideOther && otherCount > 0 && (
+          <p className="text-xs text-[var(--muted)]">
+            {OTHER_ROLE_NOTE} Currently {otherCount} openings sit in Other (hidden from charts).
+          </p>
+        )}
         {ingestState && <p className="text-sm text-[var(--muted)]">{ingestState}</p>}
         {data?.interimNote && (
           <p className="text-sm text-[var(--warn)]">{data.interimNote}</p>
@@ -140,12 +179,12 @@ export default function TrendsPage() {
 
       {data && (
         <div className="space-y-6">
-          <RisingChart rows={data.roles.rows} />
+          <RisingChart rows={roleRows} />
           <div className="grid gap-4 lg:grid-cols-2">
-            <TrendTable title="Role families" rows={data.roles.rows} periodLabel={periodLabel} />
-            <TrendTable title="Domains" rows={data.domains.rows} periodLabel={periodLabel} />
+            <TrendTable title="Role families" rows={roleRows} periodLabel={periodLabel} />
+            <TrendTable title="Domains" rows={domainRows} periodLabel={periodLabel} />
           </div>
-          <TrendTable title="Companies hiring" rows={data.companies.rows} periodLabel={periodLabel} />
+          <TrendTable title="Companies hiring" rows={companyRows} periodLabel={periodLabel} />
         </div>
       )}
     </div>

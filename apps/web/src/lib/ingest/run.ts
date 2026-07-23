@@ -222,7 +222,29 @@ async function upsertJob(job: NormalizedJob, domainHint?: string | null): Promis
   return result[0].id;
 }
 
+export async function reclassifyActiveJobs() {
+  const active = await db.select().from(jobPostings).where(eq(jobPostings.isActive, true));
+  let updated = 0;
+  for (const job of active) {
+    const roleFamily = classifyRoleFamily(job.title);
+    const company = job.companyId
+      ? (await db.select().from(companies).where(eq(companies.id, job.companyId)).limit(1))[0]
+      : null;
+    const domain = classifyDomain(job.title, company?.domainHint);
+    if (roleFamily !== job.roleFamily || domain !== job.domain) {
+      await db
+        .update(jobPostings)
+        .set({ roleFamily, domain })
+        .where(eq(jobPostings.id, job.id));
+      updated++;
+    }
+  }
+  if (updated > 0) await writeSnapshots();
+  return { scanned: active.length, updated };
+}
+
 export async function runIngest(opts?: { includeJsearch?: boolean; sources?: string[] }) {
+  await reclassifyActiveJobs();
   const enabled = await db.select().from(companies).where(eq(companies.enabled, true));
   const allow = opts?.sources?.length ? new Set(opts.sources) : null;
   const seenIds = new Set<number>();
