@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg: #0f1419;
   --bg-elevated: #171d25;
   --bg-soft: #1c2430;
@@ -9,14 +10,39 @@
   --muted: #8b9bb0;
   --accent: #3d9a7a;
   --accent-dim: #2a6b55;
+  --accent-fg: #04140f;
   --warn: #d4a017;
   --up: #3d9a7a;
   --down: #c45c5c;
   --chart-1: #3d9a7a;
   --chart-2: #5b8def;
   --chart-3: #d4a017;
+  --glow-1: #1a3a32;
+  --glow-2: #1a2a44;
   --font-display: "Fraunces", Georgia, serif;
   --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f2f5f3;
+  --bg-elevated: #ffffff;
+  --bg-soft: #e4ebe7;
+  --border: #c5d0ca;
+  --text: #1a2420;
+  --muted: #5a6b63;
+  --accent: #2d8a68;
+  --accent-dim: #3d9a7a;
+  --accent-fg: #04140f;
+  --warn: #b8860b;
+  --up: #1f7a58;
+  --down: #b84a4a;
+  --chart-1: #2d8a68;
+  --chart-2: #3d6fc0;
+  --chart-3: #b8860b;
+  --glow-1: #d4ebe3;
+  --glow-2: #d6e0ef;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -34,8 +60,8 @@ body {
   margin: 0;
   min-height: 100%;
   background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, #1a3a32 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 90% 0%, #1a2a44 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 10% -10%, var(--glow-1) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 0%, var(--glow-2) 0%, transparent 50%),
     var(--bg);
   color: var(--text);
   font-family: var(--font-body);

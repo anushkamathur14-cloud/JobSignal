@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const links = [
   { href: "/", label: "Trends" },
@@ -23,24 +24,27 @@ export function Nav() {
           </span>
           <span className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">personal</span>
         </Link>
-        <nav className="flex flex-wrap gap-1">
-          {links.map((l) => {
-            const active = path === l.href;
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`rounded-md px-3 py-1.5 text-sm transition ${
-                  active
-                    ? "bg-[var(--bg-soft)] text-[var(--text)]"
-                    : "text-[var(--muted)] hover:text-[var(--text)]"
-                }`}
-              >
-                {l.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="flex items-center gap-2">
+          <nav className="flex flex-wrap gap-1">
+            {links.map((l) => {
+              const active = path === l.href;
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`rounded-md px-3 py-1.5 text-sm transition ${
+                    active
+                      ? "bg-[var(--bg-soft)] text-[var(--text)]"
+                      : "text-[var(--muted)] hover:text-[var(--text)]"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

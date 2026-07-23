@@ -20,9 +20,14 @@ export const metadata: Metadata = {
   description: "Personal hiring trends across Greenhouse, Lever, Ashby, Workday & more",
 };
 
+const themeInitScript = `(function(){try{var t=localStorage.getItem("job-signal-theme");if(t!=="dark"&&t!=="light")t="light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className={`${body.variable} ${display.variable}`} style={{ fontFamily: "var(--font-body-loaded), var(--font-body)" }}>
         <div className="min-h-screen">
           <Nav />
