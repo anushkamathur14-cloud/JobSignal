@@ -1,0 +1,114 @@
+# Seed watchlist — public ATS boards across Greenhouse, Lever, Ashby, Workday
+companies:
+  - name: Stripe
+    ats_type: greenhouse
+    board_slug: stripe
+    domain_hint: fintech
+  - name: Airbnb
+    ats_type: greenhouse
+    board_slug: airbnb
+    domain_hint: marketplace
+  - name: Discord
+    ats_type: greenhouse
+    board_slug: discord
+    domain_hint: consumer
+  - name: Figma
+    ats_type: greenhouse
+    board_slug: figma
+    domain_hint: design_tools
+  - name: Cloudflare
+    ats_type: greenhouse
+    board_slug: cloudflare
+    domain_hint: infrastructure
+  - name: Datadog
+    ats_type: greenhouse
+    board_slug: datadog
+    domain_hint: observability
+  - name: Anthropic
+    ats_type: greenhouse
+    board_slug: anthropic
+    domain_hint: ai_ml
+  - name: Coinbase
+    ats_type: greenhouse
+    board_slug: coinbase
+    domain_hint: fintech
+  - name: Robinhood
+    ats_type: greenhouse
+    board_slug: robinhood
+    domain_hint: fintech
+  - name: GitLab
+    ats_type: greenhouse
+    board_slug: gitlab
+    domain_hint: infrastructure
+  - name: Netflix
+    ats_type: lever
+    board_slug: netflix
+    domain_hint: media
+  - name: Spotify
+    ats_type: lever
+    board_slug: spotify
+    domain_hint: media
+  - name: Palantir
+    ats_type: lever
+    board_slug: palantir
+    domain_hint: enterprise
+  - name: Shopify
+    ats_type: lever
+    board_slug: shopify
+    domain_hint: retail
+  - name: Twitch Interactive
+    ats_type: lever
+    board_slug: twitch
+    domain_hint: media
+  - name: Linear
+    ats_type: ashby
+    board_slug: linear
+    board_url: https://jobs.ashbyhq.com/linear
+    domain_hint: productivity
+  - name: Vercel
+    ats_type: ashby
+    board_slug: vercel
+    board_url: https://jobs.ashbyhq.com/vercel
+    domain_hint: infrastructure
+  - name: Cursor
+    ats_type: ashby
+    board_slug: cursor
+    board_url: https://jobs.ashbyhq.com/cursor
+    domain_hint: ai_ml
+  - name: Ramp
+    ats_type: ashby
+    board_slug: ramp
+    board_url: https://jobs.ashbyhq.com/ramp
+    domain_hint: fintech
+  - name: Notion Labs
+    ats_type: ashby
+    board_slug: notion
+    board_url: https://jobs.ashbyhq.com/notion
+    domain_hint: productivity
+  - name: Salesforce
+    ats_type: workday
+    board_slug: salesforce
+    board_url: https://salesforce.wd12.myworkdayjobs.com/wday/cxs/salesforce/External_Career_Site/jobs
+    domain_hint: enterprise
+  - name: Adobe
+    ats_type: workday
+    board_slug: adobe
+    board_url: https://adobe.wd5.myworkdayjobs.com/wday/cxs/adobe/external_experienced/jobs
+    domain_hint: creative_tools
+  - name: NVIDIA
+    ats_type: workday
+    board_slug: nvidia
+    board_url: https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs
+    domain_hint: ai_ml
+  - name: ServiceNow
+    ats_type: workday
+    board_slug: servicenow
+    board_url: https://servicenow.wd1.myworkdayjobs.com/wday/cxs/servicenow/ServiceNow/jobs
+    domain_hint: enterprise
+
+jsearch_queries:
+  - software engineer remote
+  - machine learning engineer
+  - product manager
+  - data scientist
+  - devops engineer
