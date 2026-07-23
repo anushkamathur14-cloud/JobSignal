@@ -3,18 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "Personal hiring trends cockpit across ATS boards and aggregators",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "dev": "npm run dev --workspace=web",
-    "build": "npm run build --workspace=web",
-    "db:generate": "npm run db:generate --workspace=web",
-    "db:migrate": "npm run db:migrate --workspace=web",
-    "db:seed": "npm run db:seed --workspace=web",
-    "ingest": "cd workers/ingest && .venv/bin/python main.py",
-    "setup": "npm install && cd workers/ingest && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && npm run db:migrate && npm run db:seed"
+    "dev": "npm run dev --prefix apps/web",
+    "build": "npm run build --prefix apps/web",
+    "db:migrate": "npm run db:migrate --prefix apps/web",
+    "db:seed": "npm run db:seed --prefix apps/web",
+    "ingest": "npm run ingest --prefix apps/web",
+    "setup": "npm install --prefix apps/web && cd workers/ingest && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && npm run db:migrate && npm run db:seed"
   },
   "license": "MIT"
 }
