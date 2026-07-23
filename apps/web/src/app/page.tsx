@@ -3,21 +3,36 @@
 import { useCallback, useEffect, useState } from "react";
 import { SourceFilter } from "@/components/SourceFilter";
 import { CategoryFilters } from "@/components/CategoryFilters";
-import { RisingChart, TrendTable, type TrendRow } from "@/components/TrendViews";
+import {
+  RoleBarChart,
+  TrendLineChart,
+  TrendTable,
+  type SeriesPoint,
+  type TrendRow,
+} from "@/components/TrendViews";
 import { OTHER_ROLE_NOTE } from "@/lib/classify";
+
+type DimBlock = {
+  periodKey: string;
+  previousKey: string | null;
+  rows: TrendRow[];
+  series: SeriesPoint[];
+  comparisonMode?: string;
+};
 
 type TrendsResponse = {
   requestedPeriodType: string;
   effectivePeriodType: string;
+  comparisonMode?: string;
   interimNote: string | null;
-  roles: { periodKey: string; previousKey: string | null; rows: TrendRow[] };
-  domains: { periodKey: string; previousKey: string | null; rows: TrendRow[] };
-  companies: { periodKey: string; previousKey: string | null; rows: TrendRow[] };
+  roles: DimBlock;
+  domains: DimBlock;
+  companies: DimBlock;
   totals: { activeJobs: number; companies: number; sources: string[] };
 };
 
 export default function TrendsPage() {
-  const [period, setPeriod] = useState<"week" | "month" | "quarter">("month");
+  const [period, setPeriod] = useState<"week" | "month" | "quarter">("week");
   const [sources, setSources] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [domains, setDomains] = useState<string[]>([]);
@@ -78,15 +93,23 @@ export default function TrendsPage() {
   const filterRows = (rows: TrendRow[]) =>
     hideOther && !roles.includes("other") ? rows.filter((r) => r.key !== "other") : rows;
 
+  const periodShort =
+    data?.effectivePeriodType === "week"
+      ? "WoW"
+      : data?.effectivePeriodType === "quarter"
+        ? "QoQ"
+        : "MoM";
+
   const periodLabel = data
-    ? `${data.effectivePeriodType} ${data.roles.periodKey}` +
-      (data.roles.previousKey ? ` vs ${data.roles.previousKey}` : " (first snapshot)")
+    ? `${periodShort} ${data.roles.periodKey}` +
+      (data.roles.previousKey ? ` vs ${data.roles.previousKey}` : "")
     : "";
 
   const roleRows = data ? filterRows(data.roles.rows) : [];
   const domainRows = data ? filterRows(data.domains.rows) : [];
   const companyRows = data?.companies.rows ?? [];
   const otherCount = data?.roles.rows.find((r) => r.key === "other")?.current ?? 0;
+  const series = data?.roles.series ?? [];
 
   return (
     <div className="space-y-8">
@@ -99,7 +122,7 @@ export default function TrendsPage() {
             Hiring trends
           </h1>
           <p className="mt-1 max-w-xl text-[var(--muted)]">
-            MoM / QoQ across your watchlist — filter by ATS, role family, and domain.
+            Live ATS openings — switch WoW / MoM / QoQ, filter by board, role, and domain.
           </p>
         </div>
         <button
@@ -179,7 +202,8 @@ export default function TrendsPage() {
 
       {data && (
         <div className="space-y-6">
-          <RisingChart rows={roleRows} />
+          <TrendLineChart series={series} rows={roleRows} periodLabel={periodLabel} />
+          <RoleBarChart rows={roleRows} />
           <div className="grid gap-4 lg:grid-cols-2">
             <TrendTable title="Role families" rows={roleRows} periodLabel={periodLabel} />
             <TrendTable title="Domains" rows={domainRows} periodLabel={periodLabel} />

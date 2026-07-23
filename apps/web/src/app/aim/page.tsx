@@ -293,29 +293,58 @@ export default function AimPage() {
 
               {r.examples.length > 0 && (
                 <div className="mt-4">
-                  <h4 className="text-xs uppercase tracking-wider text-[var(--muted)]">
-                    Example openings
-                  </h4>
-                  <ul className="mt-2 space-y-1 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs uppercase tracking-wider text-[var(--muted)]">
+                      Related openings
+                    </h4>
+                    <button
+                      type="button"
+                      className="text-xs text-[var(--chart-2)] underline"
+                      onClick={() => {
+                        const links = r.examples
+                          .filter((ex) => ex.url)
+                          .map((ex) => `${ex.title} @ ${ex.company}\n${ex.url}`)
+                          .join("\n\n");
+                        void navigator.clipboard.writeText(links);
+                      }}
+                    >
+                      Copy links
+                    </button>
+                  </div>
+                  <ul className="mt-2 space-y-2 text-sm">
                     {r.examples.map((ex) => (
-                      <li key={`${ex.company}-${ex.title}`}>
-                        {ex.url ? (
+                      <li
+                        key={`${ex.company}-${ex.title}-${ex.url}`}
+                        className="flex flex-wrap items-baseline justify-between gap-2 border-t border-[var(--border)]/50 pt-2 first:border-0 first:pt-0"
+                      >
+                        <div>
+                          {ex.url ? (
+                            <a
+                              href={ex.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-[var(--chart-2)] underline-offset-2 hover:underline"
+                            >
+                              {ex.title}
+                            </a>
+                          ) : (
+                            <span className="font-medium">{ex.title}</span>
+                          )}
+                          <div className="text-[var(--muted)]">
+                            {ex.company} · {ex.source}
+                            {ex.location ? ` · ${ex.location}` : ""}
+                          </div>
+                        </div>
+                        {ex.url && (
                           <a
                             href={ex.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[var(--chart-2)] underline-offset-2 hover:underline"
+                            className="shrink-0 rounded-md border border-[var(--border)] px-2 py-1 text-xs text-[var(--text)] hover:border-[var(--accent-dim)]"
                           >
-                            {ex.title}
+                            Open ↗
                           </a>
-                        ) : (
-                          ex.title
                         )}
-                        <span className="text-[var(--muted)]">
-                          {" "}
-                          · {ex.company} · {ex.source}
-                          {ex.location ? ` · ${ex.location}` : ""}
-                        </span>
                       </li>
                     ))}
                   </ul>

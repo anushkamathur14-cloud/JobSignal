@@ -66,7 +66,16 @@ export async function buildRecommendations(resumeId: number, sources?: string[])
         whyHot.push(`Active hiring at: ${hiringCompanies.slice(0, 4).join(", ")}`);
       }
 
-      const examples = (await listActiveJobs({ sources, roleFamily, limit: 5 })).map((j) => ({
+      const withLinks = await listActiveJobs({
+        sources,
+        roleFamily,
+        limit: 8,
+        requireUrl: true,
+      });
+      const fallback = withLinks.length
+        ? withLinks
+        : await listActiveJobs({ sources, roleFamily, limit: 8 });
+      const examples = fallback.map((j) => ({
         title: j.title,
         company: j.companyName,
         source: j.source,

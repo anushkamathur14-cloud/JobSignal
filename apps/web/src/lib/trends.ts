@@ -1,4 +1,4 @@
-import { and, eq, sql, desc, inArray } from "drizzle-orm";
+import { and, eq, sql, desc, inArray, isNotNull, ne } from "drizzle-orm";
 import { jobPostings, jobSnapshots, companies } from "@job-signal/db";
 import { db } from "./db";
 import {
@@ -7,6 +7,9 @@ import {
   monthKey,
   quarterKey,
   previousPeriodKey,
+  periodKeyFor,
+  periodStart,
+  recentPeriodKeys,
   pctChange,
   isoNow,
 } from "./periods";
@@ -101,7 +104,131 @@ export type TrendRow = {
   newCount: number;
 };
 
-async function aggregateDimension(
+export type SeriesPoint = { period: string; key: string; count: number };
+
+type JobRow = {
+  source: string;
+  companyName: string;
+  roleFamily: string;
+  domain: string;
+  firstSeen: string;
+  isActive: boolean;
+};
+
+function dimValue(
+  job: JobRow,
+  dimension: "roleFamily" | "domain" | "companyName"
+): string {
+  return (job[dimension] as string) || "unknown";
+}
+
+/** Compare current vs prior period using first_seen when snapshot history is thin */
+function compareFromJobs(
+  jobs: JobRow[],
+  periodType: "week" | "month" | "quarter",
+  dimension: "roleFamily" | "domain" | "companyName"
+): { periodKey: string; previousKey: string; rows: TrendRow[]; usedFallback: true } {
+  const now = new Date();
+  const periodKey = periodKeyFor(periodType, now);
+  const previousKey = previousPeriodKey(periodType, periodKey)!;
+  const start = periodStart(periodType, now).getTime();
+
+  const currentMap = new Map<string, { active: number; neu: number }>();
+  const previousMap = new Map<string, { active: number; neu: number }>();
+
+  for (const job of jobs) {
+    if (!job.isActive) continue;
+    const k = dimValue(job, dimension);
+    const first = new Date(job.firstSeen).getTime();
+    const cur = currentMap.get(k) ?? { active: 0, neu: 0 };
+    cur.active += 1;
+    if (first >= start) cur.neu += 1;
+    currentMap.set(k, cur);
+
+    // Still-open roles that existed before this period ≈ prior stock
+    if (first < start) {
+      const prev = previousMap.get(k) ?? { active: 0, neu: 0 };
+      prev.active += 1;
+      previousMap.set(k, prev);
+    }
+  }
+
+  const keys = new Set([...currentMap.keys(), ...previousMap.keys()]);
+  const rows: TrendRow[] = [...keys]
+    .map((key) => {
+      const current = currentMap.get(key)?.active ?? 0;
+      const previous = previousMap.get(key)?.active ?? 0;
+      return {
+        key,
+        label: formatLabel(key),
+        current,
+        previous,
+        delta: current - previous,
+        pct: pctChange(current, previous),
+        newCount: currentMap.get(key)?.neu ?? 0,
+      };
+    })
+    .sort((a, b) => b.delta - a.delta || b.current - a.current);
+
+  return { periodKey, previousKey, rows, usedFallback: true };
+}
+
+function seriesFromJobs(
+  jobs: JobRow[],
+  periodType: "week" | "month" | "quarter",
+  dimension: "roleFamily" | "domain" | "companyName",
+  topKeys: string[]
+): SeriesPoint[] {
+  const keys = recentPeriodKeys(periodType, periodType === "week" ? 8 : periodType === "month" ? 6 : 4);
+  const series: SeriesPoint[] = [];
+
+  // Cumulative: openings first_seen on or before end of each period bucket
+  // Approximate period end as start of next period
+  for (const pk of keys) {
+    for (const key of topKeys) {
+      let count = 0;
+      for (const job of jobs) {
+        if (!job.isActive) continue;
+        if (dimValue(job, dimension) !== key) continue;
+        const jobPeriod = periodKeyFor(periodType, new Date(job.firstSeen));
+        // count jobs that had appeared by this period (first_seen period <= pk chronologically)
+        if (keys.indexOf(jobPeriod) !== -1 && keys.indexOf(jobPeriod) <= keys.indexOf(pk)) {
+          count += 1;
+        } else if (keys.indexOf(jobPeriod) === -1) {
+          // older than window — include in all points
+          count += 1;
+        }
+      }
+      series.push({ period: pk, key, count });
+    }
+  }
+  return series;
+}
+
+async function loadFilteredJobs(opts: {
+  sources?: string[];
+  roles?: string[];
+  domains?: string[];
+}): Promise<JobRow[]> {
+  const clauses = [eq(jobPostings.isActive, true)];
+  if (opts.sources?.length) clauses.push(inArray(jobPostings.source, opts.sources));
+  if (opts.roles?.length) clauses.push(inArray(jobPostings.roleFamily, opts.roles));
+  if (opts.domains?.length) clauses.push(inArray(jobPostings.domain, opts.domains));
+
+  return db
+    .select({
+      source: jobPostings.source,
+      companyName: jobPostings.companyName,
+      roleFamily: jobPostings.roleFamily,
+      domain: jobPostings.domain,
+      firstSeen: jobPostings.firstSeen,
+      isActive: jobPostings.isActive,
+    })
+    .from(jobPostings)
+    .where(and(...clauses));
+}
+
+async function aggregateFromSnapshots(
   periodType: "week" | "month" | "quarter",
   dimension: "roleFamily" | "domain" | "companyName",
   sources?: SourceFilter,
@@ -110,10 +237,10 @@ async function aggregateDimension(
   periodKey: string;
   previousKey: string | null;
   rows: TrendRow[];
-  series: { period: string; key: string; count: number }[];
-}> {
-  const currentKey =
-    periodType === "week" ? weekKey() : periodType === "month" ? monthKey() : quarterKey();
+  series: SeriesPoint[];
+  hasPreviousSnapshot: boolean;
+} | null> {
+  const currentKey = periodKeyFor(periodType);
   const prevKey = previousPeriodKey(periodType, currentKey);
 
   const clauses = [eq(jobSnapshots.periodType, periodType), eq(jobSnapshots.periodKey, currentKey)];
@@ -121,21 +248,20 @@ async function aggregateDimension(
   if (src) clauses.push(src);
   clauses.push(...categoryClauses(categories));
 
-  const currentRows = await db
-    .select()
-    .from(jobSnapshots)
-    .where(and(...clauses));
+  const currentRows = await db.select().from(jobSnapshots).where(and(...clauses));
+  if (!currentRows.length) return null;
 
   let previousRows: typeof currentRows = [];
+  let hasPreviousSnapshot = false;
   if (prevKey) {
     const pClauses = [eq(jobSnapshots.periodType, periodType), eq(jobSnapshots.periodKey, prevKey)];
     if (src) pClauses.push(src);
     pClauses.push(...categoryClauses(categories));
-    previousRows = await db
-      .select()
-      .from(jobSnapshots)
-      .where(and(...pClauses));
+    previousRows = await db.select().from(jobSnapshots).where(and(...pClauses));
+    hasPreviousSnapshot = previousRows.length > 0;
   }
+
+  if (!hasPreviousSnapshot) return null;
 
   const sumBy = (rows: typeof currentRows) => {
     const map = new Map<string, { active: number; neu: number }>();
@@ -177,23 +303,56 @@ async function aggregateDimension(
     .orderBy(jobSnapshots.periodKey);
 
   const allPeriods = allPeriodRows.map((r) => r.periodKey).slice(-8);
-
-  const series: { period: string; key: string; count: number }[] = [];
+  const series: SeriesPoint[] = [];
   for (const pk of allPeriods) {
     const sClauses = [eq(jobSnapshots.periodType, periodType), eq(jobSnapshots.periodKey, pk)];
     if (src) sClauses.push(src);
     sClauses.push(...categoryClauses(categories));
-    const sRows = await db
-      .select()
-      .from(jobSnapshots)
-      .where(and(...sClauses));
+    const sRows = await db.select().from(jobSnapshots).where(and(...sClauses));
     const m = sumBy(sRows);
     for (const [key, v] of m) {
       series.push({ period: pk, key, count: v.active });
     }
   }
 
-  return { periodKey: currentKey, previousKey: prevKey, rows, series };
+  return {
+    periodKey: currentKey,
+    previousKey: prevKey,
+    rows,
+    series,
+    hasPreviousSnapshot: true,
+  };
+}
+
+async function aggregateDimension(
+  periodType: "week" | "month" | "quarter",
+  dimension: "roleFamily" | "domain" | "companyName",
+  jobs: JobRow[],
+  sources?: SourceFilter,
+  categories?: { roles?: string[]; domains?: string[] }
+) {
+  const fromSnaps = await aggregateFromSnapshots(periodType, dimension, sources, categories);
+  if (fromSnaps) {
+    return {
+      periodKey: fromSnaps.periodKey,
+      previousKey: fromSnaps.previousKey,
+      rows: fromSnaps.rows,
+      series: fromSnaps.series,
+      comparisonMode: "snapshot" as const,
+    };
+  }
+
+  const fallback = compareFromJobs(jobs, periodType, dimension);
+  const topKeys = fallback.rows.filter((r) => r.key !== "other").slice(0, 6).map((r) => r.key);
+  const series = seriesFromJobs(jobs, periodType, dimension, topKeys);
+
+  return {
+    periodKey: fallback.periodKey,
+    previousKey: fallback.previousKey,
+    rows: fallback.rows,
+    series,
+    comparisonMode: "first_seen" as const,
+  };
 }
 
 export async function getTrends(opts: {
@@ -206,30 +365,21 @@ export async function getTrends(opts: {
   const sources = opts.sources;
   const categories = { roles: opts.roles, domains: opts.domains };
 
-  const monthCountRow = await db
-    .select({ c: sql<number>`count(distinct ${jobSnapshots.periodKey})` })
-    .from(jobSnapshots)
-    .where(eq(jobSnapshots.periodType, "month"));
-  const monthCount = Number(monthCountRow[0]?.c ?? 0);
+  const jobs = await loadFilteredJobs({
+    sources,
+    roles: opts.roles,
+    domains: opts.domains,
+  });
 
-  let effectiveType: "week" | "month" | "quarter" = periodType;
-  if (periodType === "month" && monthCount < 2) {
-    const weekCountRow = await db
-      .select({ c: sql<number>`count(distinct ${jobSnapshots.periodKey})` })
-      .from(jobSnapshots)
-      .where(eq(jobSnapshots.periodType, "week"));
-    if (Number(weekCountRow[0]?.c ?? 0) >= 1) effectiveType = "week";
-  }
-
-  const jobClauses = [eq(jobPostings.isActive, true)];
-  if (sources?.length) jobClauses.push(inArray(jobPostings.source, sources));
-  if (opts.roles?.length) jobClauses.push(inArray(jobPostings.roleFamily, opts.roles));
-  if (opts.domains?.length) jobClauses.push(inArray(jobPostings.domain, opts.domains));
-
-  const activeJobsRow = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(jobPostings)
-    .where(and(...jobClauses));
+  const roles = await aggregateDimension(periodType, "roleFamily", jobs, sources, categories);
+  const domains = await aggregateDimension(periodType, "domain", jobs, sources, categories);
+  const companiesAgg = await aggregateDimension(
+    periodType,
+    "companyName",
+    jobs,
+    sources,
+    categories
+  );
 
   const companiesRow = await db
     .select({ c: sql<number>`count(*)` })
@@ -242,18 +392,22 @@ export async function getTrends(opts: {
     .where(eq(jobPostings.isActive, true))
     .groupBy(jobPostings.source);
 
+  const mode = roles.comparisonMode;
+  const interimNote =
+    mode === "first_seen"
+      ? `${periodType === "week" ? "WoW" : periodType === "month" ? "MoM" : "QoQ"} uses posting age (first seen) until a second ${periodType}ly snapshot exists from a later ingest.`
+      : null;
+
   return {
     requestedPeriodType: periodType,
-    effectivePeriodType: effectiveType,
-    interimNote:
-      periodType === "month" && effectiveType === "week"
-        ? "Showing week-over-week until two months of snapshots exist."
-        : null,
-    roles: await aggregateDimension(effectiveType, "roleFamily", sources, categories),
-    domains: await aggregateDimension(effectiveType, "domain", sources, categories),
-    companies: await aggregateDimension(effectiveType, "companyName", sources, categories),
+    effectivePeriodType: periodType,
+    comparisonMode: mode,
+    interimNote,
+    roles,
+    domains,
+    companies: companiesAgg,
     totals: {
-      activeJobs: Number(activeJobsRow[0]?.c ?? 0),
+      activeJobs: jobs.length,
       companies: Number(companiesRow[0]?.c ?? 0),
       sources: sourceRows.map((r) => r.source),
     },
@@ -265,11 +419,16 @@ export async function listActiveJobs(opts: {
   roleFamily?: string;
   domain?: string;
   limit?: number;
+  requireUrl?: boolean;
 }) {
   const clauses = [eq(jobPostings.isActive, true)];
   if (opts.sources?.length) clauses.push(inArray(jobPostings.source, opts.sources));
   if (opts.roleFamily) clauses.push(eq(jobPostings.roleFamily, opts.roleFamily));
   if (opts.domain) clauses.push(eq(jobPostings.domain, opts.domain));
+  if (opts.requireUrl) {
+    clauses.push(isNotNull(jobPostings.url));
+    clauses.push(ne(jobPostings.url, ""));
+  }
 
   return db
     .select()

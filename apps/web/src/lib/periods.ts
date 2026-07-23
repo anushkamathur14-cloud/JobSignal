@@ -1,5 +1,4 @@
 import {
-  startOfWeek,
   format,
   getISOWeek,
   getISOWeekYear,
@@ -9,6 +8,10 @@ import {
   subMonths,
   subWeeks,
   subQuarters,
+  startOfISOWeek,
+  startOfMonth,
+  startOfQuarter,
+  addWeeks,
 } from "date-fns";
 
 export function isoNow(): string {
@@ -33,6 +36,24 @@ export function quarterKey(d = new Date()): string {
   return `${getYear(d)}-Q${getQuarter(d)}`;
 }
 
+export function periodKeyFor(
+  periodType: "week" | "month" | "quarter",
+  d = new Date()
+): string {
+  if (periodType === "week") return weekKey(d);
+  if (periodType === "month") return monthKey(d);
+  return quarterKey(d);
+}
+
+export function periodStart(
+  periodType: "week" | "month" | "quarter",
+  d = new Date()
+): Date {
+  if (periodType === "week") return startOfISOWeek(d);
+  if (periodType === "month") return startOfMonth(d);
+  return startOfQuarter(d);
+}
+
 export function previousPeriodKey(
   periodType: "week" | "month" | "quarter",
   periodKey: string
@@ -55,13 +76,11 @@ export function previousPeriodKey(
     if (periodType === "week") {
       const match = periodKey.match(/^(\d{4})-W(\d{2})$/);
       if (!match) return null;
-      // approximate: take Thursday of that ISO week
       const year = Number(match[1]);
       const week = Number(match[2]);
-      const jan4 = new Date(year, 0, 4);
-      const start = startOfWeek(jan4, { weekStartsOn: 1 });
-      const d = new Date(start);
-      d.setDate(start.getDate() + (week - 1) * 7);
+      const jan4 = new Date(Date.UTC(year, 0, 4));
+      const week1Start = startOfISOWeek(jan4);
+      const d = addWeeks(week1Start, week - 1);
       return weekKey(subWeeks(d, 1));
     }
   } catch {
@@ -70,8 +89,25 @@ export function previousPeriodKey(
   return null;
 }
 
+/** Build N prior period keys ending at current (inclusive), oldest → newest */
+export function recentPeriodKeys(
+  periodType: "week" | "month" | "quarter",
+  count: number,
+  end = new Date()
+): string[] {
+  const keys: string[] = [];
+  let d = end;
+  for (let i = 0; i < count; i++) {
+    keys.unshift(periodKeyFor(periodType, d));
+    if (periodType === "week") d = subWeeks(d, 1);
+    else if (periodType === "month") d = subMonths(d, 1);
+    else d = subQuarters(d, 1);
+  }
+  return keys;
+}
+
 export function pctChange(current: number, previous: number): number | null {
-  if (previous === 0) return current > 0 ? 100 : 0;
+  if (previous === 0) return current > 0 ? 100 : null;
   return ((current - previous) / previous) * 100;
 }
 
