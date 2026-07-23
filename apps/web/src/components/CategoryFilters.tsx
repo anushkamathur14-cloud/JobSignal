@@ -130,34 +130,62 @@ export function CategoryFilters({
     "other",
   ].map((id) => ({ id, label: formatLabel(id) }));
 
+  const interestOptions = MY_INTEREST_ROLES.map((id) => ({
+    id,
+    label: formatLabel(id),
+  }));
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs uppercase tracking-wider text-[var(--muted)]">
-          Interests
+          Job filters
         </span>
         <button
           type="button"
           onClick={() => (interestActive ? clearInterests() : applyInterests())}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+          className={`rounded-md border px-3 py-1.5 text-sm font-semibold transition ${
             interestActive
-              ? "border-[var(--accent)] bg-[var(--accent)]/25 text-[var(--text)]"
-              : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
+              ? "border-[var(--accent)] bg-[var(--accent)] text-[#04140f]"
+              : "border-[var(--accent-dim)] bg-[var(--accent)]/15 text-[var(--text)] hover:bg-[var(--accent)]/25"
           }`}
         >
-          My interests
+          {interestActive ? "My interests · on" : "My interests"}
         </button>
         <span className="text-xs text-[var(--muted)]">
           Strategy · Sales · CS · PM · PMM · Marketing · ML/AI
         </span>
       </div>
-      <ChipFilter label="Roles" options={roleOptions} selected={roles} onChange={onRolesChange} />
       <ChipFilter
-        label="Domains"
-        options={domainOptions}
-        selected={domains}
-        onChange={onDomainsChange}
+        label="Roles"
+        options={interestOptions}
+        selected={roles.filter((r) => MY_INTEREST_ROLES.includes(r as (typeof MY_INTEREST_ROLES)[number]))}
+        onChange={(next) => {
+          const extras = roles.filter(
+            (r) => !MY_INTEREST_ROLES.includes(r as (typeof MY_INTEREST_ROLES)[number])
+          );
+          onRolesChange([...next, ...extras]);
+        }}
       />
+      <details className="group">
+        <summary className="cursor-pointer text-xs text-[var(--muted)] hover:text-[var(--text)]">
+          More roles & domains
+        </summary>
+        <div className="mt-3 space-y-3">
+          <ChipFilter
+            label="All roles"
+            options={roleOptions}
+            selected={roles}
+            onChange={onRolesChange}
+          />
+          <ChipFilter
+            label="Domains"
+            options={domainOptions}
+            selected={domains}
+            onChange={onDomainsChange}
+          />
+        </div>
+      </details>
     </div>
   );
 }

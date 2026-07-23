@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MY_INTEREST_ROLES } from "@/lib/classify";
 import { SourceFilter } from "@/components/SourceFilter";
 import { CategoryFilters } from "@/components/CategoryFilters";
 import {
@@ -42,7 +41,6 @@ export default function TrendsPage() {
   const [sources, setSources] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [domains, setDomains] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [data, setData] = useState<TrendsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,52 +150,22 @@ export default function TrendsPage() {
               {p.label}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            className="ml-auto rounded-md border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] hover:text-[var(--text)]"
-          >
-            Filters{activeFilters ? ` · ${activeFilters}` : ""}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const on =
-                roles.length === MY_INTEREST_ROLES.length &&
-                MY_INTEREST_ROLES.every((r) => roles.includes(r)) &&
-                domains.length === 0;
-              if (on) {
-                setRoles([]);
-                setDomains([]);
-              } else {
-                setRoles([...MY_INTEREST_ROLES]);
-                setDomains([]);
-                setShowFilters(true);
-              }
-            }}
-            className={`rounded-md border px-3 py-1.5 text-sm ${
-              roles.length === MY_INTEREST_ROLES.length &&
-              MY_INTEREST_ROLES.every((r) => roles.includes(r)) &&
-              domains.length === 0
-                ? "border-[var(--accent)] bg-[var(--accent)]/20 text-[var(--text)]"
-                : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
-            }`}
-          >
-            My interests
-          </button>
+          {activeFilters > 0 && (
+            <span className="ml-auto text-xs text-[var(--muted)]">
+              {activeFilters} filter{activeFilters === 1 ? "" : "s"} on
+            </span>
+          )}
         </div>
 
-        {showFilters && (
-          <div className="mt-4 space-y-3 border-t border-[var(--border)] pt-4">
-            <SourceFilter selected={sources} onChange={setSources} />
-            <CategoryFilters
-              roles={roles}
-              domains={domains}
-              onRolesChange={setRoles}
-              onDomainsChange={setDomains}
-            />
-          </div>
-        )}
+        <div className="mt-4 space-y-3 border-t border-[var(--border)] pt-4">
+          <CategoryFilters
+            roles={roles}
+            domains={domains}
+            onRolesChange={setRoles}
+            onDomainsChange={setDomains}
+          />
+          <SourceFilter selected={sources} onChange={setSources} />
+        </div>
 
         {data && (
           <p className="mt-3 text-xs text-[var(--muted)]">
