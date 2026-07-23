@@ -9,6 +9,7 @@ export const companies = sqliteTable(
     boardSlug: text("board_slug"),
     boardUrl: text("board_url"),
     domainHint: text("domain_hint"),
+    stage: text("stage"), // enterprise | growth | startup
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),

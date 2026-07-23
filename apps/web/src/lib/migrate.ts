@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS companies (
   board_slug TEXT,
   board_url TEXT,
   domain_hint TEXT,
+  stage TEXT,
   enabled INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -38,7 +39,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS jobs_source_external ON job_postings(source, e
 CREATE INDEX IF NOT EXISTS jobs_role_family ON job_postings(role_family);
 CREATE INDEX IF NOT EXISTS jobs_domain ON job_postings(domain);
 CREATE INDEX IF NOT EXISTS jobs_active ON job_postings(is_active);
-CREATE INDEX IF NOT EXISTS jobs_posted_at ON job_postings(posted_at);
 
 CREATE TABLE IF NOT EXISTS job_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -121,8 +121,8 @@ async function hydrateFromSeed(client: Client) {
 
   for (const c of raw.companies ?? []) {
     await client.execute({
-      sql: `INSERT INTO companies (id, name, ats_type, board_slug, board_url, domain_hint, enabled, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO companies (id, name, ats_type, board_slug, board_url, domain_hint, stage, enabled, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         c.id as number,
         c.name as string,
@@ -130,6 +130,7 @@ async function hydrateFromSeed(client: Client) {
         (c.board_slug as string) ?? null,
         (c.board_url as string) ?? null,
         (c.domain_hint as string) ?? null,
+        (c.stage as string) ?? null,
         c.enabled ? 1 : 0,
         c.created_at as string,
         c.updated_at as string,
@@ -189,6 +190,11 @@ export async function migrate(client: Client = defaultClient) {
   // Additive migrations for existing DBs
   try {
     await client.execute("ALTER TABLE job_postings ADD COLUMN posted_at TEXT");
+  } catch {
+    // column already exists
+  }
+  try {
+    await client.execute("ALTER TABLE companies ADD COLUMN stage TEXT");
   } catch {
     // column already exists
   }

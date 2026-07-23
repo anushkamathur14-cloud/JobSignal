@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
         outputFileTracingRoot: path.join(__dirname, "../../"),
       }),
   outputFileTracingIncludes: {
-    "/api/**/*": ["./data/vercel-seed.json"],
+    "/api/**/*": ["./data/vercel-seed.json", "./data/companies.yaml"],
   },
 };
 

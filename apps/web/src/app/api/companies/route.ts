@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       boardSlug: body.boardSlug ?? null,
       boardUrl: body.boardUrl ?? null,
       domainHint: body.domainHint ?? null,
+      stage: body.stage ?? null,
       enabled: body.enabled ?? true,
       createdAt: now,
       updatedAt: now,
@@ -45,6 +46,7 @@ export async function PATCH(req: NextRequest) {
       boardSlug: body.boardSlug,
       boardUrl: body.boardUrl,
       domainHint: body.domainHint,
+      stage: body.stage,
       enabled: body.enabled,
       updatedAt: isoNow(),
     })
